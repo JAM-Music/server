@@ -1,0 +1,9 @@
+<% for route in @routes : %>
+const <%- route.name %> = require('./<%- route.name %>.route');
+<% end %>
+
+module.exports = [
+<% for route in @routes : %>
+  { path: '/<%- route.name %>', router: <%- route.name %> },
+<% end %>
+];

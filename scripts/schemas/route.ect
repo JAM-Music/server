@@ -1,0 +1,6 @@
+const router = require('express').Router();
+
+// Routes for this router
+router.get('/', (req, res) => res.send('<%- @name %> route is runing'));
+
+module.exports = router;
