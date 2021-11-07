@@ -17,12 +17,13 @@ module.exports = {
     'import/resolver': {
       alias: {
         map: [
-          ['_config', './config'],
-          ['_controllers', './controllers'],
-          ['_middleware', './middleware'],
-          ['_models', './models'],
-          ['_routes', './routes'],
-          ['_utils', './utils'],
+          ['_config', './src/config'],
+          ['_controllers', './src/controllers'],
+          ['_middleware', './src/middleware'],
+          ['_models', './src/models'],
+          ['_routes', './src/routes'],
+          ['_validators', './src/utils/validators'],
+          ['_utils', './src/utils'],
         ],
         extensions: ['.js', '.json'],
       },

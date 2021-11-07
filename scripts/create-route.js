@@ -14,7 +14,7 @@ const values = {
   name,
 };
 
-const routesIndex = path.resolve('./routes');
+const routesIndex = path.resolve('./src/routes');
 
 const renderer = ect({ root: path.resolve(__dirname, 'schemas'), ext: '.ect' });
 

@@ -1,16 +1,20 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
+    "baseUrl": "./src",
     "module": "commonjs",
+    "target": "ES3",
+    "moduleResolution": "node",
     "paths": {
       "_config/*": ["./config/*"],
       "_controllers/*": ["./controllers/*"],
       "_middleware/*": ["./middleware/*"],
       "_models/*": ["./models/*"],
       "_routes/*": ["./routes/*"],
+      "_validators/*": ["./utils/validators/*"],
       "_utils/*": ["./utils/*"],
       "_sockets/*": ["./sockets/*"]
     }
   },
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "./node_modules", "**/node_modules/*"]
 }
