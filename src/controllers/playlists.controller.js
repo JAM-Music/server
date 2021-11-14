@@ -1,11 +1,74 @@
+const { Types } = require('mongoose');
+const { destination } = require('_config/multer');
 const Playlists = require('_models/Playlists');
+const FS = require('fs/promises');
+const path = require('path');
+async function populatePlaylist(user, _id) {
+  const match = { user: Types.ObjectId(user) };
+  if (_id) {
+    // eslint-disable-next-line no-underscore-dangle
+    match._id = Types.ObjectId(_id);
+  }
+  const playlist = await Playlists.aggregate([
+    { $match: match },
+    {
+      $lookup: {
+        from: 'songs',
+        pipeline: [
+          {
+            $lookup: {
+              from: 'albums',
+              pipeline: [{
+                $lookup: {
+                  from: 'artists',
+                  localField: 'author',
+                  foreignField: '_id',
+                  as: 'authorx',
+                },
+              },
+              { $unwind: '$authorx' },
+              { $set: { author: '$authorx' } },
+              { $unset: 'authorx' }],
+              localField: 'album',
+              foreignField: '_id',
+              as: 'albumx',
+            },
+          },
+          {
+            $lookup: {
+              from: 'genres',
+              localField: 'genre',
+              foreignField: '_id',
+              as: 'genrex',
+            },
+          },
+          { $unwind: '$albumx' },
+          { $unwind: '$genrex' },
+          { $set: { album: '$albumx' } },
+          { $set: { genre: '$genrex' } },
+          { $unset: ['albumx', 'genrex'] },
+        ],
+        localField: 'songs',
+        foreignField: '_id',
+        as: 'songsx',
+      },
+    },
+    { $set: { songs: '$songsx' } },
+    { $unset: 'songsx' },
+  ]);
+  return playlist;
+}
 
 async function create(req, res) {
   try {
     const { _id } = req.user;
     const { title } = req.body;
-    if (!title) return res.status(400).send({ title: ['El atributo título es obligatorio'] });
-    const playlist = await Playlists.create({ user: _id, title });
+    const error = {};
+    if (!title) error.title = ['El atributo es obligatorio'];
+    if (!req.file) error.image = ['El atributo es obligatorio'];
+    if (Object.keys(error).length) return res.status(400).send(error);
+    const image = `${destination}/${req.file.filename}`;
+    const playlist = await Playlists.create({ user: _id, title, image });
     return res.send(playlist.toObject());
   } catch (error) {
     return res.status(500).send(error);
@@ -29,13 +92,19 @@ async function update(req, res) {
   try {
     const { _id } = req.user;
     const { playlist } = req.params;
-    if (!req.body.title) return res.sendStatus(200);
-    if (!playlist) return res.sendStatus(400).send({ playlist: ['El atributo playlist es obligatorio'] });
-    const found = await Playlists.findOneAndUpdate(
-      { _id: playlist, user: _id }, { title: req.body.title }, { new: true },
-    ).populate('songs').exec();
+    const found = await Playlists.findOne({ _id: playlist, user: _id });
     if (!found) return res.sendStatus(404);
-    return res.status(200).send(found);
+    if (req.body.title) {
+      found.title = req.body.title;
+    }
+    if (req.file) {
+      if (found.image) {
+        FS.rm(path.resolve('public', found.image));
+      }
+      found.image = `public/${destination}/${req.file.filename}`;
+    }
+    await found.save();
+    return res.sendStatus(200);
   } catch (error) {
     return res.status(500).send(error);
   }
@@ -77,7 +146,7 @@ async function removeSong(req, res) {
 async function getByUser(req, res) {
   try {
     const { _id } = req.user;
-    const found = await Playlists.find({ user: _id }).exec();
+    const found = await Playlists.find({ user: _id }, '-songs').exec();
     return res.send(found);
   } catch (error) {
     return res.status(500).send(error);
@@ -89,8 +158,9 @@ async function getById(req, res) {
     const { _id } = req.user;
     const { playlist } = req.params;
     if (!playlist) return res.sendStatus(400).send({ playlist: ['El atributo playlist es obligatorio'] });
-    const found = await Playlists.find({ user: _id, _id: playlist }).populate('songs').exec();
-    return res.send(found.toObject());
+    const found = await populatePlaylist(_id, playlist);
+    if (!found.length) return res.sendStatus(404);
+    return res.send(found[0]);
   } catch (error) {
     return res.status(500).send(error);
   }

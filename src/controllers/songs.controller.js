@@ -94,6 +94,14 @@ async function getByAlbum(req, res) {
   return res.send(songs);
 }
 
+async function getById(req, res) {
+  const { song } = req.params;
+  if (!song) return res.status(400).send({ song: ['El atributo es obligatorio'] });
+  const found = await findSong({ _id: song });
+  if (!found?.length) return res.status(404);
+  return res.send(found[0]);
+}
+
 module.exports = {
-  getByGenre, search, getByAlbum, getByArtist,
+  getByGenre, search, getByAlbum, getByArtist, findSong, getById,
 };
