@@ -4,6 +4,7 @@ const SongSchema = new Schema({
   title: {
     type: String,
     required: true,
+    index: true,
   },
   duration: {
     type: Number,

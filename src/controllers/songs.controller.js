@@ -35,7 +35,8 @@ async function findSong(filter, options, sort) {
 async function search(req, res) {
   const { search: str } = req.query;
   const [songs, artists, albums] = await Promise.all([
-    findSong({ $text: { $search: str } }, { score: { $meta: 'textScore' } }, { score: { $meta: 'textScore' } }),
+    // eslint-disable-next-line no-useless-escape
+    findSong({ $or: [{ $text: { $search: str } }, { title: { $regex: `\\.*${str}\\.*`, $options: 'gi' } }] }, { score: { $meta: 'textScore' } }, { score: { $meta: 'textScore' } }),
     Artists.find({ $text: { $search: str } }, { score: { $meta: 'textScore' } })
       .sort({ score: { $meta: 'textScore' } }).exec(),
     Albums.find({ $text: { $search: str } }, { score: { $meta: 'textScore' } })

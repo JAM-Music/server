@@ -101,7 +101,7 @@ async function update(req, res) {
       if (found.image) {
         FS.rm(path.resolve('public', found.image));
       }
-      found.image = `public/${destination}/${req.file.filename}`;
+      found.image = `${destination}/${req.file.filename}`;
     }
     await found.save();
     return res.sendStatus(200);
