@@ -15,17 +15,13 @@ const SongSchema = new Schema({
     required: true,
     ref: 'Albums',
   },
-  // author: {
-  //   type: Types.ObjectId,
-  //   required: true,
-  //   ref: 'Artists',
-  // },
   genre: {
     type: Types.ObjectId,
     required: true,
     ref: 'Genres',
   },
   image: String,
+  filename: String,
 });
 
 SongSchema.index({ title: 'text' });

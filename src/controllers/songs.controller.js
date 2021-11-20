@@ -2,6 +2,8 @@ const { Types } = require('mongoose');
 const Albums = require('_models/Albums');
 const Artists = require('_models/Artists');
 const Songs = require('_models/Songs');
+const fs = require('fs');
+const Recents = require('_models/Recents');
 
 async function getByGenre(req, res) {
   try {
@@ -103,6 +105,103 @@ async function getById(req, res) {
   return res.send(found[0]);
 }
 
+async function recents(req, res) {
+  const { _id } = req.user;
+  const songs = await Recents.aggregate([
+    { $match: { user: Types.ObjectId(_id) } },
+    { $group: { _id: '$song', date: { $max: '$date' } } },
+    { $sort: { date: -1 } },
+    { $limit: 10 },
+    {
+      $lookup: {
+        from: 'songs',
+        pipeline: [
+          {
+            $lookup: {
+              from: 'albums',
+              pipeline: [
+                {
+                  $lookup: {
+                    from: 'artists',
+                    localField: 'author',
+                    foreignField: '_id',
+                    as: 'author',
+                  },
+                },
+              ],
+              localField: 'album',
+              foreignField: '_id',
+              as: 'albums',
+            },
+          },
+          {
+            $lookup: {
+              from: 'genres',
+              localField: 'genre',
+              foreignField: '_id',
+              as: 'genre',
+            },
+          },
+          { $unwind: '$albums' },
+          { $unwind: '$genre' },
+          { $set: { album: '$albums' } },
+          { $unset: 'albums' },
+        ],
+        localField: '_id',
+        foreignField: '_id',
+        as: 'song',
+      },
+    },
+    { $unwind: '$song' },
+    { $replaceRoot: { newRoot: '$song' } },
+  ]);
+  return res.send(songs);
+}
+
+async function play(req, res) {
+  const { song } = req.params;
+  const { _id } = req.user;
+  const found = await Songs.findById(song);
+  Recents.create({ user: _id, song });
+  const music = `music/${found.filename}`;
+
+  const stat = fs.statSync(music);
+  const { range } = req.headers;
+  let readStream;
+
+  if (range !== undefined) {
+    const parts = range.replace(/bytes=/, '').split('-');
+
+    const partialStart = parts[0];
+    const partialEnd = parts[1];
+
+    if ((Number.isNaN(partialStart) && partialStart.length > 1)
+    || (Number.isNaN(partialEnd) && partialEnd.length > 1)) {
+      res.sendStatus(500); // ERR_INCOMPLETE_CHUNKED_ENCODING
+      return;
+    }
+
+    const start = parseInt(partialStart, 10);
+    const end = partialEnd ? parseInt(partialEnd, 10) : stat.size - 1;
+    const contentLength = (end - start) + 1;
+
+    res.status(206).header({
+      'Content-Type': 'audio/mpeg',
+      'Content-Length': contentLength,
+      'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+    });
+
+    readStream = fs.createReadStream(music, { start, end });
+  } else {
+    res.header({
+      'Content-Type': 'audio/mpeg',
+      'Content-Length': stat.size,
+    });
+    readStream = fs.createReadStream(music);
+  }
+  readStream.pipe(res);
+}
+
 module.exports = {
-  getByGenre, search, getByAlbum, getByArtist, findSong, getById,
+  getByGenre, search, getByAlbum, getByArtist, findSong, getById, play, recents,
 };
