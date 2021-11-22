@@ -3,6 +3,7 @@ const { destination } = require('_config/multer');
 const Playlists = require('_models/Playlists');
 const FS = require('fs/promises');
 const path = require('path');
+
 async function populatePlaylist(user, _id) {
   const match = { user: Types.ObjectId(user) };
   if (_id) {
@@ -80,8 +81,12 @@ async function remove(req, res) {
     const { _id } = req.user;
     const { playlist } = req.params;
     if (!playlist) return res.sendStatus(400).send({ playlist: ['El atributo playlist es obligatorio'] });
-    const found = await Playlists.findOneAndDelete({ _id: playlist, user: _id }).exec();
+    const found = await Playlists.findOne({ _id: playlist, user: _id }).exec();
     if (!found) return res.sendStatus(404);
+    if (found.image) {
+      FS.rm(path.resolve('public', found.image));
+    }
+    await Playlists.deleteOne({ _id: playlist });
     return res.sendStatus(200);
   } catch (error) {
     return res.status(500).send(error);

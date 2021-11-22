@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "node ./bin/www",
-    "dev": "env-cmd nodemon ./src/bin/www",
+    "start": "env-cmd node ./src/bin/www",
+    "dev": "env-cmd nodemon -w ./src ./src/bin/www",
     "lint": "eslint --fix .",
     "create-route": "node ./scripts/create-route.js"
   },
