@@ -111,7 +111,6 @@ async function recents(req, res) {
   const songs = await Recents.aggregate([
     { $match: { user: Types.ObjectId(_id) } },
     { $group: { _id: '$song', date: { $max: '$date' } } },
-    { $sort: { date: -1 } },
     { $limit: 10 },
     {
       $lookup: {
@@ -155,9 +154,10 @@ async function recents(req, res) {
       },
     },
     { $unwind: '$song' },
+    { $set: { 'song.date': '$date' } },
     { $replaceRoot: { newRoot: '$song' } },
   ]);
-  return res.send(songs);
+  return res.send(songs.sort((a, b) => new Date(b.date) - new Date(a.date)));
 }
 
 async function play(req, res) {
