@@ -15,7 +15,7 @@ async function populatePlaylist(user, _id) {
     {
       $lookup: {
         from: 'songs',
-        as: 'songs',
+        as: 'songsx',
         let: { songsId: '$songs' },
         pipeline: [
           { $match: { $expr: { $in: ['$_id', '$$songsId'] } } },
@@ -58,6 +58,8 @@ async function populatePlaylist(user, _id) {
         ],
       },
     },
+    { $set: { songs: '$songsx' } },
+    { $unset: 'songsx' },
   ]);
   return playlist;
 }
