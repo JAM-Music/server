@@ -58,7 +58,7 @@ async function getByArtist(req, res) {
     {
       $lookup: {
         from: 'albums',
-        as: 'album',
+        as: 'albums',
         let: { albumId: '$album' },
         pipeline: [
           {
@@ -66,7 +66,7 @@ async function getByArtist(req, res) {
               $expr: {
                 $and: [
                   { $eq: ['$$albumId', '$_id'] },
-                  { $eq: ['$author', { $toObjectId: '618ee0ba6326ba8b4043dba5' }] }],
+                  { $eq: ['$author', { $toObjectId: artist }] }],
               },
             },
 
