@@ -58,21 +58,29 @@ async function getByArtist(req, res) {
     {
       $lookup: {
         from: 'albums',
+        as: 'album',
+        let: { albumId: '$album' },
         pipeline: [
-          { $match: { author: Types.ObjectId(artist) } },
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ['$$albumId', '$_id'] },
+                  { $eq: ['$author', { $toObjectId: '618ee0ba6326ba8b4043dba5' }] }],
+              },
+            },
+
+          },
           {
             $lookup: {
               from: 'artists',
+              as: 'author',
               localField: 'author',
               foreignField: '_id',
-              as: 'author',
             },
           },
           { $unwind: '$author' },
         ],
-        localField: 'album',
-        foreignField: '_id',
-        as: 'albums',
       },
     },
     { $match: { albums: { $size: 1 } } },
@@ -116,45 +124,49 @@ async function recents(req, res) {
     {
       $lookup: {
         from: 'songs',
+        as: 'song',
+        let: { songId: '$_id' },
         pipeline: [
+          { $match: { $expr: { $eq: ['$_id', '$$songId'] } } },
           {
             $lookup: {
               from: 'albums',
+              as: 'album',
+              let: { albumId: '$album' },
               pipeline: [
+                {
+                  $match: {
+                    $expr: { $eq: ['$$albumId', '$_id'] },
+                  },
+                },
                 {
                   $lookup: {
                     from: 'artists',
+                    as: 'author',
                     localField: 'author',
                     foreignField: '_id',
-                    as: 'author',
                   },
                 },
                 { $unwind: '$author' },
               ],
-              localField: 'album',
-              foreignField: '_id',
-              as: 'albums',
             },
           },
           {
             $lookup: {
               from: 'genres',
+              as: 'genre',
               localField: 'genre',
               foreignField: '_id',
-              as: 'genre',
             },
           },
-          { $unwind: '$albums' },
           { $unwind: '$genre' },
-          { $set: { album: '$albums' } },
-          { $unset: 'albums' },
+          { $unwind: '$album' },
         ],
-        localField: '_id',
-        foreignField: '_id',
-        as: 'song',
       },
     },
-    { $unwind: '$song' },
+    {
+      $unwind: { path: '$song', preserveNullAndEmptyArrays: true },
+    },
     { $set: { 'song.date': '$date' } },
     { $replaceRoot: { newRoot: '$song' } },
   ]);

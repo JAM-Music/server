@@ -15,60 +15,47 @@ async function populatePlaylist(user, _id) {
     {
       $lookup: {
         from: 'songs',
+        as: 'songs',
+        let: { songsId: '$songs' },
         pipeline: [
+          { $match: { $expr: { $in: ['$_id', '$$songsId'] } } },
           {
             $lookup: {
               from: 'albums',
-              pipeline: [{
-                $lookup: {
-                  from: 'artists',
-                  localField: 'author',
-                  foreignField: '_id',
-                  as: 'authorx',
+              as: 'album',
+              let: { albumId: '$album' },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: { $eq: ['$$albumId', '$_id'] },
+                  },
                 },
-              },
-              { $unwind: '$authorx' },
-              { $set: { author: '$authorx' } },
-              { $unset: 'authorx' }],
-              localField: 'album',
-              foreignField: '_id',
-              as: 'albumx',
+                {
+                  $lookup: {
+                    from: 'artists',
+                    as: 'author',
+                    localField: 'author',
+                    foreignField: '_id',
+                  },
+                },
+                { $unwind: '$author' },
+              ],
             },
           },
           {
             $lookup: {
               from: 'genres',
+              as: 'genre',
               localField: 'genre',
               foreignField: '_id',
-              as: 'genrex',
             },
           },
-          { $unwind: '$albumx' },
-          { $unwind: '$genrex' },
-          { $set: { album: '$albumx' } },
-          { $set: { genre: '$genrex' } },
-          { $unset: ['albumx', 'genrex'] },
+          { $unwind: '$genre' },
+          { $unwind: '$album' },
+          { $set: { sort: { $indexOfArray: ['$$songsId', '$_id'] } } },
+          { $sort: { sort: 1 } },
+          { $unset: 'sort' },
         ],
-        localField: 'songs',
-        foreignField: '_id',
-        as: 'songsx',
-      },
-    },
-    { $unwind: { path: '$songsx', preserveNullAndEmptyArrays: true } },
-    {
-      $addFields: {
-        sort: {
-          $indexOfArray: ['$songs', '$songsx._id'],
-        },
-      },
-    },
-    { $sort: { _id: 1, sort: 1 } },
-    {
-      $group: {
-        _id: '$_id',
-        title: { $first: '$title' },
-        image: { $first: '$image' },
-        songs: { $push: '$songsx' },
       },
     },
   ]);
