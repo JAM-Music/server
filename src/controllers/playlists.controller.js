@@ -54,8 +54,23 @@ async function populatePlaylist(user, _id) {
         as: 'songsx',
       },
     },
-    { $set: { songs: '$songsx' } },
-    { $unset: 'songsx' },
+    { $unwind: { path: '$songsx', preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        sort: {
+          $indexOfArray: ['$songs', '$songsx._id'],
+        },
+      },
+    },
+    { $sort: { _id: 1, sort: 1 } },
+    {
+      $group: {
+        _id: '$_id',
+        title: { $first: '$title' },
+        image: { $first: '$image' },
+        songs: { $push: '$songsx' },
+      },
+    },
   ]);
   return playlist;
 }
