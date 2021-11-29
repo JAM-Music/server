@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "env-cmd node ./src/bin/www",
+    "start": "node ./src/bin/www",
     "dev": "env-cmd nodemon -w ./src ./src/bin/www",
     "lint": "eslint --fix .",
     "create-route": "node ./scripts/create-route.js"
